@@ -17,6 +17,7 @@
 #define __CONFIG_AM335X_EVM_H
 
 #include <configs/ti_am335x_common.h>
+#define CONFIG_ENV_IS_NOWHERE
 
 #ifndef CONFIG_SPL_BUILD
 #ifndef CONFIG_FIT
@@ -69,9 +70,14 @@
 
 #define BOOTENV_DEV_LEGACY_MMC(devtypeu, devtypel, instance) \
 	"bootcmd_" #devtypel #instance "=" \
+	"gpio clear 56; " \
+	"gpio clear 55; " \
+	"gpio clear 54; " \
+	"gpio set 53; " \
+	"setenv interface mmc; " \
 	"setenv mmcdev " #instance"; "\
-	"setenv bootpart " #instance":2 ; "\
-	"run mmcboot\0"
+	"setenv bootpart " #instance":1 ; "\
+	"run boot\0"
 
 #define BOOTENV_DEV_NAME_LEGACY_MMC(devtypeu, devtypel, instance) \
 	#devtypel #instance " "
@@ -124,19 +130,24 @@
 		"root=${spiroot} " \
 		"rootfstype=${spirootfstype}\0" \
 	"bootenv=uEnv.txt\0" \
-	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
-	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
+	"script=boot.scr\0" \
+	"scriptfile=${script}\0" \
+	"loadbootscript=load ${interface} ${bootpart} ${loadaddr} ${scriptfile};\0" \
+	"bootscript=echo Running bootscript from mmc${bootpart} ...; " \
 		"source ${loadaddr}\0" \
-	"loadbootenv=load mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
-	"importbootenv=echo Importing environment from mmc ...; " \
+	"loadbootenv=load ${interface} ${bootpart} ${loadaddr} ${bootenv}\0" \
+	"importbootenv=echo Importing environment from ${interface} ...; " \
 		"env import -t -r $loadaddr $filesize\0" \
 	"ramargs=setenv bootargs console=${console} " \
 		"${optargs} " \
 		"root=${ramroot} " \
 		"rootfstype=${ramrootfstype}\0" \
-	"loadramdisk=load mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
-	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
-	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
+	"loadramdisk=load ${interface} ${mmcdev} ${rdaddr} ramdisk.gz\0" \
+	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
+	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...; load ${interface} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
+	"failumsboot=echo; echo FAILSAFE: U-Boot UMS (USB Mass Storage) enabled, media now available over the usb slave port ...; " \
+		"ums 0 ${interface} 1;\0" \
 	"mmcloados=run args_mmc; " \
 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
 			"if run loadfdt; then " \
@@ -151,8 +162,8 @@
 		"else " \
 			"bootz; " \
 		"fi;\0" \
-	"mmcboot=mmc dev ${mmcdev}; " \
-		"if mmc rescan; then " \
+	"mmcboot=${interface} dev ${mmcdev}; " \
+		"if ${interface} rescan; then " \
 			"echo SD/MMC found on device ${mmcdev};" \
 			"if run loadbootscript; then " \
 				"run bootscript;" \
@@ -180,12 +191,28 @@
 		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
 	"findfdt="\
 		"if test $board_name = A335BONE; then " \
-			"setenv fdtfile am335x-bone.dtb; fi; " \
+			"setenv fdtfile am335x-bone.dtb; setenv fdtbase am335x-bone; fi; " \
 		"if test $board_name = A335BNLT; then " \
-			"if test $board_rev = BBG1; then " \
-				"setenv fdtfile am335x-bonegreen.dtb; " \
+			"if test $board_rev = BLA0; then " \
+				"setenv fdtfile am335x-boneblue.dtb; setenv fdtbase am335x-boneblue; " \
+			"elif test $board_rev = BBG1; then " \
+				"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; " \
+			"elif test $board_rev = GW1A; then " \
+				"setenv fdtfile am335x-bonegreen-wireless.dtb; setenv fdtbase am335x-bonegreen-wireless; " \
+			"elif test $board_rev = AIA0; then " \
+				"setenv fdtfile am335x-abbbi.dtb; setenv fdtbase am335x-abbbi; " \
+			"elif test $board_rev = EIA0; then " \
+				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
+			"elif test $board_rev = SE0A; then " \
+				"setenv fdtfile am335x-sancloud-bbe.dtb; setenv fdtbase am335x-sancloud-bbe; " \
+			"elif test $board_rev = ME06; then " \
+				"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; " \
+			"elif test $board_rev = M10A; then " \
+				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
+			"elif test $board_rev = GH01; then " \
+				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
 			"else " \
-				"setenv fdtfile am335x-boneblack.dtb; " \
+				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
 			"fi; " \
 		"fi; " \
 		"if test $board_name = A33515BB; then " \
@@ -194,6 +221,9 @@
 			"setenv fdtfile am335x-evmsk.dtb; fi; " \
 		"if test $fdtfile = undefined; then " \
 			"echo WARNING: Could not determine device tree to use; fi; \0" \
+	EEWIKI_NFS \
+	EEWIKI_BOOT \
+	EEWIKI_UNAME_BOOT \
 	NANDARGS \
 	NETARGS \
 	DFUARGS \
@@ -471,6 +501,8 @@
 #define CONFIG_PHY_GIGE
 #define CONFIG_PHYLIB
 #define CONFIG_PHY_SMSC
+#define CONFIG_PHY_ATHEROS
+#define CONFIG_PHY_VITESSE
 
 /*
  * NOR Size = 16 MiB

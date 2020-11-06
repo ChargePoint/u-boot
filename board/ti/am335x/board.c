@@ -481,6 +481,24 @@ void sdram_init(void)
  */
 int board_init(void)
 {
+	u32 sys_reboot;
+
+	sys_reboot = readl(PRM_RSTST);
+	if (sys_reboot & (1 << 9))
+		puts("Reset Source: IcePick reset has occurred.\n");
+
+	if (sys_reboot & (1 << 5))
+		puts("Reset Source: Global external warm reset has occurred.\n");
+
+	if (sys_reboot & (1 << 4))
+		puts("Reset Source: watchdog reset has occurred.\n");
+
+	if (sys_reboot & (1 << 1))
+		puts("Reset Source: Global warm SW reset has occurred.\n");
+
+	if (sys_reboot & (1 << 0))
+		puts("Reset Source: Power-on reset has occurred.\n");
+
 #if defined(CONFIG_HW_WATCHDOG)
 	hw_watchdog_init();
 #endif
@@ -511,6 +529,13 @@ int board_late_init(void)
 	if ( (header.version[0] == 0x1a) && (header.version[1] == 0x00) &&
 	     (header.version[2] == 0x00) && (header.version[3] == 0x00) ) {
 		setenv("board_rev", "BBG1");
+	} else if ( (header.version[0] == 0x30) && (header.version[1] == 0x30) &&
+	            (header.version[2] == 0x41) && (header.version[3] == 0x35) ) {
+		setenv("board_rev", "SE0A");
+		header.version[0] = 0x53;
+		header.version[1] = 0x45;
+		header.version[2] = 0x30;
+		header.version[3] = 0x41;
 	} else {
 		strncpy(safe_string, (char *)header.version, sizeof(header.version));
 		safe_string[sizeof(header.version)] = 0;
@@ -627,7 +652,7 @@ int board_eth_init(bd_t *bis)
 	if (read_eeprom(&header) < 0)
 		puts("Could not get board ID.\n");
 
-	if (board_is_bone(&header) || board_is_bone_lt(&header) ||
+	if (board_is_bone(&header) || (board_is_bone_lt(&header) && !board_is_bone_lt_enhanced(&header)) ||
 	    board_is_idk(&header)) {
 		writel(MII_MODE_ENABLE, &cdev->miisel);
 		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
@@ -657,7 +682,7 @@ int board_eth_init(bd_t *bis)
 #define AR8051_DEBUG_RGMII_CLK_DLY_REG	0x5
 #define AR8051_RGMII_TX_CLK_DLY		0x100
 
-	if (board_is_evm_sk(&header) || board_is_gp_evm(&header)) {
+	if (board_is_evm_sk(&header) || board_is_gp_evm(&header) || board_is_bone_lt_enhanced(&header)) {
 		const char *devname;
 		devname = miiphy_get_current_dev();
 
