@@ -10,6 +10,10 @@
 #include <image.h>
 #include <version.h>
 
+#ifndef PLAIN_VERSION
+#define PLAIN_VERSION "2016.03"
+#endif
+
 static void usage(void);
 
 /* parameters initialized by core will be used by the image type code */

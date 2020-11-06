@@ -25,6 +25,10 @@
 #include <u-boot/crc.h>
 #include <version.h>
 
+#ifndef PLAIN_VERSION
+#define PLAIN_VERSION "2016.03"
+#endif
+
 #define CRC_SIZE sizeof(uint32_t)
 
 static void usage(const char *exec_name)

@@ -12,6 +12,10 @@
 #include <image.h>
 #include <version.h>
 
+#ifndef PLAIN_VERSION
+#define PLAIN_VERSION "2016.03"
+#endif
+
 static void copy_file(int, const char *, int);
 static void usage(void);
 

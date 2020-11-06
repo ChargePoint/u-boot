@@ -14,6 +14,10 @@
 #include <image.h>
 #include <version.h>
 
+#ifndef PLAIN_VERSION
+#define PLAIN_VERSION "2016.03"
+#endif
+
 /**
  * fit_set_hash_value - set hash value in requested has node
  * @fit: pointer to the FIT format image header
