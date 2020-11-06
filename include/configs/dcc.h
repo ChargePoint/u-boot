@@ -13,11 +13,18 @@
  * GNU General Public License for more details.
  */
 
-#ifndef __CONFIG_AM335X_EVM_H
-#define __CONFIG_AM335X_EVM_H
+#ifndef __CONFIG_AM335X_DCC_H
+#define __CONFIG_AM335X_DCC_H
 
 #include <configs/ti_am335x_common.h>
 #define CONFIG_ENV_IS_NOWHERE
+/* disable sdcard boot */
+#undef CONFIG_EMMC_BOOT
+#define CONFIG_SPL_ENV_SUPPORT
+#define CONFIG_ETH_SUPPORT
+#define CONFIG_SPL_NET_SUPPORT
+#define CONFIG_SPL_ETH_SUPPORT
+#define CONFIG_DRIVER_TI_CPSW
 
 #ifndef CONFIG_SPL_BUILD
 #ifndef CONFIG_FIT
@@ -38,7 +45,7 @@
 #define V_SCLK				(V_OSCK)
 
 /* Custom script for NOR */
-#define CONFIG_SYS_LDSCRIPT		"board/ti/am335x/u-boot.lds"
+#define CONFIG_SYS_LDSCRIPT		"board/chargepoint/dcc/u-boot.lds"
 
 /* Always 128 KiB env size */
 #define CONFIG_ENV_SIZE			(128 << 10)
@@ -97,14 +104,20 @@
 	func(NAND, nand, 0) \
 	func(PXE, pxe, na) \
 	func(DHCP, dhcp, na)
-
+#if 1
 #define CONFIG_BOOTCOMMAND \
 	"set autoload no; " \
 	"dhcp; " \
-	"tftp 0x80200000 uImage.am335x-evmsk; " \
+	"tftp 0x80200000 uImage.am335x-dcc; " \
+	"set bootargs console=ttyO0,115200n8; " \
+	"bootm 0x80200000;" \
+	"reset;"
+#else
+#define CONFIG_BOOTCOMMAND \
+	"fatload mmc 1:1 0x80200000 uImage.am335x-dcc; " \
 	"set bootargs console=ttyO0,115200n8; " \
 	"bootm 0x80200000"
-
+#endif
 #include <config_distro_bootcmd.h>
 
 #ifndef CONFIG_SPL_BUILD
@@ -246,6 +259,7 @@
 #define CONFIG_CMD_EEPROM
 #define CONFIG_ENV_EEPROM_IS_ON_I2C
 #define CONFIG_SYS_I2C_EEPROM_ADDR	0x50	/* Main EEPROM */
+
 #define CONFIG_SYS_I2C_EEPROM_ADDR_LEN	2
 
 /* PMIC support */
@@ -258,9 +272,11 @@
 #define CONFIG_SPL_YMODEM_SUPPORT
 
 /* Bootcount using the RTC block */
+#ifndef CONFIG_DCC_NORTC
 #define CONFIG_BOOTCOUNT_LIMIT
 #define CONFIG_BOOTCOUNT_AM33XX
 #define CONFIG_SYS_BOOTCOUNT_BE
+#endif
 
 /* USB gadget RNDIS */
 #define CONFIG_SPL_MUSB_NEW_SUPPORT
@@ -408,8 +424,9 @@
 /* General network SPL  */
 #define CONFIG_SPL_NET_SUPPORT
 #define CONFIG_SPL_ENV_SUPPORT
-#define CONFIG_SPL_NET_VCI_STRING	"AM335x U-Boot SPL"
 #endif
+
+#define CONFIG_SPL_NET_VCI_STRING	"AM335x U-Boot SPL"
 
 /* USB Device Firmware Update support */
 #ifndef CONFIG_SPL_BUILD
@@ -490,23 +507,25 @@
 #define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_SPL_ENV_SUPPORT
 #define CONFIG_SYS_MMC_ENV_DEV		1
-#define CONFIG_SYS_MMC_ENV_PART		2
-#define CONFIG_ENV_OFFSET		0x0
+#define CONFIG_SYS_MMC_ENV_PART		0
+#define CONFIG_ENV_OFFSET		0xE0000
+/*
 #define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + CONFIG_ENV_SIZE)
 #define CONFIG_SYS_REDUNDAND_ENVIRONMENT
+*/
 #endif
 
 /* SPI flash. */
+/*
 #define CONFIG_CMD_SF
-#define CONFIG_SF_DEFAULT_SPEED		24000000
+#define CONFIG_SF_DEFAULT_SPEED		24000000 */
 
 /* Network. */
 #define CONFIG_PHY_GIGE
 #define CONFIG_PHYLIB
+#define CONFIG_PHY_ADDR                 0
 #define CONFIG_PHY_SMSC
-#define CONFIG_PHY_ATHEROS
-#define CONFIG_PHY_VITESSE
-
+#define PHY_ANEG_TIMEOUT        800000 /* PHY needs longer time to get link up due to cpnk OTA bootup.DCC wait for CPNK ethernet for 18 mins(3 times the mfg OTA complete time) */
 /*
  * NOR Size = 16 MiB
  * Number of Sectors/Blocks = 128
@@ -547,4 +566,4 @@
 #endif
 #endif  /* NOR support */
 
-#endif	/* ! __CONFIG_AM335X_EVM_H */
+#endif	/* ! __CONFIG_AM335X_DCC_H */

@@ -69,7 +69,11 @@ const struct dpll_params *get_dpll_mpu_params(void)
 
 const struct dpll_params *get_dpll_core_params(void)
 {
+#ifdef CONFIG_DCC
+	return &dpll_core_opp100;
+#else
 	return &dpll_core;
+#endif
 }
 
 const struct dpll_params *get_dpll_per_params(void)
@@ -122,7 +126,9 @@ void enable_basic_clocks(void)
 		&cmper->l4lsclkstctrl,
 		&cmwkup->wkclkstctrl,
 		&cmper->emiffwclkctrl,
-		&cmrtc->clkstctrl,
+#ifndef CONFIG_DCC_NORTC
+	        &cmrtc->clkstctrl,
+#endif
 		0
 	};
 
@@ -147,7 +153,9 @@ void enable_basic_clocks(void)
 		&cmper->i2c1clkctrl,
 		&cmper->cpgmac0clkctrl,
 		&cmper->spi0clkctrl,
+#ifndef CONFIG_DCC_NORTC
 		&cmrtc->rtcclkctrl,
+#endif
 		&cmper->usb0clkctrl,
 		&cmper->emiffwclkctrl,
 		&cmper->emifclkctrl,

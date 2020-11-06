@@ -122,7 +122,9 @@ int print_cpuinfo(void)
 int am335x_get_efuse_mpu_max_freq(struct ctrl_dev *cdev)
 {
 	int sil_rev;
-
+#ifdef CONFIG_DCC
+        return MPUPLL_M_1000;
+#endif
 	sil_rev = readl(&cdev->deviceid) >> 28;
 
 	if (sil_rev == 1)

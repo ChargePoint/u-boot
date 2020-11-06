@@ -1,0 +1,6 @@
+ChargePoint DCC BOARD
+M:	Vikas Gahlan <vikas.gahlan@chargepoint.com>
+S:	Maintained
+F:	board/chargepoint/dcc/
+F:	include/configs/dcc.h
+F:	configs/am335x_dcc_defconfig

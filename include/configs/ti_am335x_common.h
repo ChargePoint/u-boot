@@ -17,7 +17,14 @@
 #define CONFIG_SYS_CACHELINE_SIZE       64
 #define CONFIG_MAX_RAM_BANK_SIZE	(1024 << 20)	/* 1GB */
 #define CONFIG_SYS_TIMERBASE		0x48040000	/* Use Timer2 */
+
+#define CONFIG_DCC_NORTC
+#define CONFIG_DCC
+#ifdef CONFIG_DCC_NORTC
+#undef CONFIG_SPL_AM33XX_ENABLE_RTC32K_OSC
+#else
 #define CONFIG_SPL_AM33XX_ENABLE_RTC32K_OSC
+#endif
 
 #include <asm/arch/omap.h>
 
@@ -36,7 +43,7 @@
 #define CONFIG_BOOTP_SEND_HOSTNAME
 #define CONFIG_BOOTP_GATEWAY
 #define CONFIG_BOOTP_SUBNETMASK
-#define CONFIG_NET_RETRY_COUNT         10
+#define CONFIG_NET_RETRY_COUNT         30
 #define CONFIG_CMD_PING
 #define CONFIG_DRIVER_TI_CPSW		/* Driver for IP block */
 #define CONFIG_MII			/* Required in net/eth.c */
@@ -46,7 +53,9 @@
  * environment to a non-zero value and enable CONFIG_BOOTCOUNT_LIMIT
  * in the board config.
  */
+#ifndef CONFIG_DCC_NORTC
 #define CONFIG_SYS_BOOTCOUNT_ADDR	0x44E3E000
+#endif
 
 /* Enable the HW watchdog, since we can use this with bootcount */
 #define CONFIG_HW_WATCHDOG

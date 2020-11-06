@@ -17,11 +17,16 @@
 #define MPUPLL_M_720	720
 #define MPUPLL_M_600	600
 #define MPUPLL_M_550	550
+#define MPUPLL_M_500	500
 #define MPUPLL_M_300	300
 
 /* MAIN PLL Fdll = 550 MHz, by default */
 #ifndef CONFIG_SYS_MPUCLK
-#define CONFIG_SYS_MPUCLK	MPUPLL_M_550
+#ifdef CONFIG_DCC
+        #define CONFIG_SYS_MPUCLK	MPUPLL_M_500
+#else
+        #define CONFIG_SYS_MPUCLK	MPUPLL_M_550
+#endif
 #endif
 
 #define UART_RESET		(0x1 << 1)
