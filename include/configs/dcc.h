@@ -109,7 +109,7 @@
 	"set autoload no; " \
 	"dhcp; " \
 	"tftp 0x80200000 uImage.am335x-dcc; " \
-	"set bootargs console=ttyO0,115200n8; " \
+	"set bootargs console=ttyO0,115200n8 serverip=${serverip} ipaddr=${ipaddr}; " \
 	"bootm 0x80200000;" \
 	"reset;"
 #else
