@@ -17,6 +17,10 @@
 #define __CONFIG_AM335X_DCC_H
 
 #include <configs/ti_am335x_common.h>
+
+/* BOOTP/DHCP options in addition to defined in ti_am335x_common.h */
+#define CONFIG_BOOTP_NISDOMAIN
+
 #define CONFIG_ENV_IS_NOWHERE
 /* disable sdcard boot */
 #undef CONFIG_EMMC_BOOT
