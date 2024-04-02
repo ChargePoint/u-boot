@@ -30,12 +30,12 @@ struct am335x_baseboard_id {
 };
 
 /* Board_type is updated based on eeprom */
-typedef enum {
-        DCC_BOARD_NONE = 1,
-        DCC_BOARD_REV2,
-        DCC_BOARD_REV3,
-        DCC_BOARD_REV4,
-} eboardType;
+enum am335x_dcc_board {
+	DCC_BOARD_NONE = -1,
+	DCC_BOARD_REV2 = 2,
+	DCC_BOARD_REV3 = 3,
+	DCC_BOARD_REV4 = 4,
+};
 
 static inline int board_is_bone(struct am335x_baseboard_id *header)
 {
@@ -87,7 +87,10 @@ void enable_uart3_pin_mux(void);
 void enable_uart4_pin_mux(void);
 void enable_uart5_pin_mux(void);
 void enable_i2c0_pin_mux(void);
-void enable_board_pin_mux(struct am335x_baseboard_id *header, eboardType board_type);
+
+/* special enable for just the boardid gpios */
 void enable_boardid_mux(void);
+void enable_board_pin_mux(struct am335x_baseboard_id *header,
+			  enum am335x_dcc_board board_type);
 int get_board_revision(void);
 #endif

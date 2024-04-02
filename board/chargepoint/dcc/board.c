@@ -35,46 +35,42 @@
 DECLARE_GLOBAL_DATA_PTR;
 
 #if defined(CONFIG_SPL_BUILD) || \
-	(defined(CONFIG_DRIVER_TI_CPSW) && !defined(CONFIG_DM_ETH))
-        static struct ctrl_dev *cdev = (struct ctrl_dev *)CTRL_DEVICE_BASE;
+    (defined(CONFIG_DRIVER_TI_CPSW) && !defined(CONFIG_DM_ETH))
+	static struct ctrl_dev *cdev = (struct ctrl_dev *)CTRL_DEVICE_BASE;
 #endif
 
-static eboardType board_type = DCC_BOARD_NONE;
+static enum am335x_dcc_board board_type = DCC_BOARD_NONE;
+
 #define GPIO_BOARD_ID1 66 /* gpio2_2 */
 #define GPIO_BOARD_ID2 67 /* gpio2_3 */
 int get_board_revision(void)
 {
-    int revision = 1;
-    int id1,id2;
-    int ret;
+	int ret;
+	int revision;
+	int id1 = 0;
+	int id2 = 0;
 
-    ret=gpio_request(GPIO_BOARD_ID1, "board-id1");
-    if (ret && ret != -EBUSY) {
-        printf("gpio: requesting pin %u failed\n", GPIO_BOARD_ID1);
-        return revision;
-    }
+	ret = gpio_request(GPIO_BOARD_ID1, "board-id1");
+	if (ret && ret != -EBUSY) {
+		printf("gpio: requesting pin %u failed\n", GPIO_BOARD_ID1);
+	} else {
+		gpio_direction_input(GPIO_BOARD_ID1);
+		id1 = gpio_get_value(GPIO_BOARD_ID1);
+		gpio_free(GPIO_BOARD_ID1);
+	}
 
-    ret=gpio_request(GPIO_BOARD_ID2, "board-id2");
-    if (ret && ret != -EBUSY) {
-        printf("gpio: requesting pin %u failed\n", GPIO_BOARD_ID2);
-        return revision;
-    }
+	ret = gpio_request(GPIO_BOARD_ID2, "board-id2");
+	if (ret && ret != -EBUSY) {
+		printf("gpio: requesting pin %u failed\n", GPIO_BOARD_ID2);
+	} else {
+		gpio_direction_input(GPIO_BOARD_ID2);
+		id2 = gpio_get_value(GPIO_BOARD_ID2);
+		gpio_free(GPIO_BOARD_ID2);
+	}
 
-    gpio_direction_input(GPIO_BOARD_ID1);
-    gpio_direction_input(GPIO_BOARD_ID2);
-
-    id1=gpio_get_value(GPIO_BOARD_ID1);
-    if (ret != -EBUSY)
-         gpio_free(GPIO_BOARD_ID1);
-
-    id2=gpio_get_value(GPIO_BOARD_ID2);
-    if (ret != -EBUSY)
-         gpio_free(GPIO_BOARD_ID2);
-
-    printf("board_id0=%d board_id1=%d \n",id1,id2);
-    revision = id2 << 1 | id1;
-    printf("board rev=%d \n",revision);
-    return revision;
+	revision = id2 << 1 | id1;
+	printf("board rev=%d (id2=%d id1=%d)\n", revision, id2, id1);
+	return revision;
 }
 
 /*
@@ -82,38 +78,38 @@ int get_board_revision(void)
  */
 static int read_eeprom(struct am335x_baseboard_id *header)
 {
-        int board_rev=-1;
-        /* Check if eeprom is available. With DCC V3/V4 we should see eeprom on I2C bus*/
-       /* if(board_type == DCC_BOARD_NONE){*/
-            if (i2c_probe(CONFIG_SYS_I2C_EEPROM_ADDR)) {
-                /*printf("DCC rev2 board\n");*/
-                board_type = DCC_BOARD_REV2;
-                /*return -ENODEV;*/
-            } else {
-                board_rev = get_board_revision();
-                if(!board_rev){
-                    printf("DCC REV3 board detected.\n");
-                    board_type = DCC_BOARD_REV4;
-                } else {
-                    printf("DCC REV4 board detected\n");
-                    board_type = DCC_BOARD_REV4;
-                }
-            }
-       /* } else {
-          printf("board type=%d already selected \n",board_type);
-        } */
-        /* This information need to be read from eeprom */
-        memset(header,0,sizeof(struct am335x_baseboard_id));
-        header->magic = 0xEE3355AA;
-        strcpy(header->name,"A335X_SK");
-        strcpy(header->version, "2.0");   //"2.0" for DCC
-        strcpy(header->serial,"36154P160337");
-        strcpy(header->config,"SKU#01");
-        memset(header->mac_addr[0],0xFF,6);
-        memset(header->mac_addr[1],0xFF,6);
-        memset(header->mac_addr[2],0xFF,6);
+	int board_rev = DCC_BOARD_NONE;
 
-        return 0;
+	/*
+	 * Check if eeprom is available. With DCC V3/V4
+	 * should see eeprom on I2C bus
+	 */
+	if (i2c_probe(CONFIG_SYS_I2C_EEPROM_ADDR)) {
+		printf("DCC REV2 board detected.\n");
+		board_type = DCC_BOARD_REV2;
+	} else {
+		board_rev = get_board_revision();
+		if (!board_rev) {
+			printf("DCC REV3 board detected.\n");
+			board_type = DCC_BOARD_REV3;
+		} else {
+			printf("DCC REV4 board detected\n");
+			board_type = DCC_BOARD_REV4;
+		}
+	}
+
+	/* This information need to be read from eeprom */
+	memset(header,0,sizeof(struct am335x_baseboard_id));
+	header->magic = 0xEE3355AA;
+	strcpy(header->name,"A335X_SK");
+	strcpy(header->version, "2.0");   //"2.0" for DCC
+	strcpy(header->serial,"36154P160337");
+	strcpy(header->config,"SKU#01");
+	memset(header->mac_addr[0],0xFF,6);
+	memset(header->mac_addr[1],0xFF,6);
+	memset(header->mac_addr[2],0xFF,6);
+
+	return 0;
 }
 
 #ifndef CONFIG_SKIP_LOWLEVEL_INIT
@@ -146,31 +142,31 @@ static struct emif_regs ddr3_dcc_emif_reg_data = {
 };
 
 static const struct ddr_data ddr3_dccv3_data = {
-        .datardsratio0 = MT41K256M16TW107_RD_DQS,
-        .datawdsratio0 = MT41K256M16TW107_WR_DQS,
-        .datafwsratio0 = MT41K256M16TW107_PHY_FIFO_WE,
-        .datawrsratio0 = MT41K256M16TW107_PHY_WR_DATA,
+	.datardsratio0 = MT41K256M16TW107_RD_DQS,
+	.datawdsratio0 = MT41K256M16TW107_WR_DQS,
+	.datafwsratio0 = MT41K256M16TW107_PHY_FIFO_WE,
+	.datawrsratio0 = MT41K256M16TW107_PHY_WR_DATA,
 };
 
 static const struct cmd_control ddr3_dccv3_cmd_ctrl_data = {
-        .cmd0csratio = MT41K256M16TW107_RATIO,
-        .cmd0iclkout = MT41K256M16TW107_INVERT_CLKOUT,
+	.cmd0csratio = MT41K256M16TW107_RATIO,
+	.cmd0iclkout = MT41K256M16TW107_INVERT_CLKOUT,
 
-        .cmd1csratio = MT41K256M16TW107_RATIO,
-        .cmd1iclkout = MT41K256M16TW107_INVERT_CLKOUT,
+	.cmd1csratio = MT41K256M16TW107_RATIO,
+	.cmd1iclkout = MT41K256M16TW107_INVERT_CLKOUT,
 
-        .cmd2csratio = MT41K256M16TW107_RATIO,
-        .cmd2iclkout = MT41K256M16TW107_INVERT_CLKOUT,
+	.cmd2csratio = MT41K256M16TW107_RATIO,
+	.cmd2iclkout = MT41K256M16TW107_INVERT_CLKOUT,
 };
 
 static struct emif_regs ddr3_dccv3_emif_reg_data = {
-        .sdram_config = MT41K256M16TW107_EMIF_SDCFG,
-        .ref_ctrl = MT41K256M16TW107_EMIF_SDREF,
-        .sdram_tim1 = MT41K256M16TW107_EMIF_TIM1,
-        .sdram_tim2 = MT41K256M16TW107_EMIF_TIM2,
-        .sdram_tim3 = MT41K256M16TW107_EMIF_TIM3,
-        .zq_config = MT41K256M16TW107_ZQ_CFG,
-        .emif_ddr_phy_ctlr_1 = MT41K256M16TW107_EMIF_READ_LATENCY,
+	.sdram_config = MT41K256M16TW107_EMIF_SDCFG,
+	.ref_ctrl = MT41K256M16TW107_EMIF_SDREF,
+	.sdram_tim1 = MT41K256M16TW107_EMIF_TIM1,
+	.sdram_tim2 = MT41K256M16TW107_EMIF_TIM2,
+	.sdram_tim3 = MT41K256M16TW107_EMIF_TIM3,
+	.zq_config = MT41K256M16TW107_ZQ_CFG,
+	.emif_ddr_phy_ctlr_1 = MT41K256M16TW107_EMIF_READ_LATENCY,
 };
 
 #ifdef CONFIG_SPL_OS_BOOT
@@ -204,25 +200,22 @@ void am33xx_spl_board_init(void)
 	struct am335x_baseboard_id header;
 	int mpu_vdd;
 
-        enable_boardid_mux();
+	enable_boardid_mux();
+	enable_i2c0_pin_mux();
+	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED, CONFIG_SYS_OMAP24_I2C_SLAVE);
+
 	if (read_eeprom(&header) < 0)
 		puts("Could not get board ID.\n");
-        /* Set CORE Frequencies to OPP100*/
+
+	/* Set CORE Frequencies to OPP100*/
 	do_setup_dpll(&dpll_core_regs, &dpll_core_opp100);
-        dpll_mpu_opp100.m = MPUPLL_M_500;
+	dpll_mpu_opp100.m = MPUPLL_M_500;
 	/* Set MPU Frequency to what we detected now that voltages are set*/
 	do_setup_dpll(&dpll_mpu_regs, &dpll_mpu_opp100);
 }
 
 const struct dpll_params *get_dpll_ddr_params(void)
 {
-	struct am335x_baseboard_id header;
-        enable_i2c0_pin_mux();
-        i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED, CONFIG_SYS_OMAP24_I2C_SLAVE);
-
-	if (read_eeprom(&header) < 0)
-		puts("Could not get board ID.\n");
-
 	return &dpll_ddr_dcc;  /* DCC use DDR at 400 Mhz */
 }
 
@@ -246,50 +239,71 @@ void set_uart_mux_conf(void)
 void set_mux_conf_regs(void)
 {
 	__maybe_unused struct am335x_baseboard_id header;
-        enable_boardid_mux();
+
+	/*
+	 * Ref Sitara TRM 'sma2' Register Field Descriptions
+	 *
+	 * rmii2_crs_dv_mode_sel (U16) requires another level of mux select
+	 * due to conflict with MMC2_DAT7 pin.
+	 *
+	 *   0: Select MMC2_DAT7 on GPMC_A9 pin in MODE3.
+	 *   1: Select RMII2_CRS_DV on GPMC_A9 pin in MODE3.
+	 *
+	 * This needs to be done in the bootloader because the devicetree
+	 * doesn't have a resource for this and the initialization is
+	 * not a guaranteed order and so it needs to be set to ensure
+	 * the mmc interface can be detected as expected.
+	 */
+#ifndef SMA2_REG_ADDR
+#define SMA2_REG_ADDR 0x44e11320
+#endif
+	writel(0x1, SMA2_REG_ADDR); /* select rmii2 */
+
+	enable_boardid_mux();
+	enable_i2c0_pin_mux();
+	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED, CONFIG_SYS_OMAP24_I2C_SLAVE);
+
 	if (read_eeprom(&header) < 0)
 		puts("Could not get board ID.\n");
-	enable_board_pin_mux(&header,board_type);
+	enable_board_pin_mux(&header, board_type);
 }
 
 const struct ctrl_ioregs ioregs_dcc = {
-	.cm0ioctl		= MT41K128M16JT125E_IOCTRL_VALUE,
-	.cm1ioctl		= MT41K128M16JT125E_IOCTRL_VALUE,
-	.cm2ioctl		= MT41K128M16JT125E_IOCTRL_VALUE,
-	.dt0ioctl		= MT41K128M16JT125E_IOCTRL_VALUE,
-	.dt1ioctl		= MT41K128M16JT125E_IOCTRL_VALUE,
+	.cm0ioctl = MT41K128M16JT125E_IOCTRL_VALUE,
+	.cm1ioctl = MT41K128M16JT125E_IOCTRL_VALUE,
+	.cm2ioctl = MT41K128M16JT125E_IOCTRL_VALUE,
+	.dt0ioctl = MT41K128M16JT125E_IOCTRL_VALUE,
+	.dt1ioctl = MT41K128M16JT125E_IOCTRL_VALUE,
 };
 
 const struct ctrl_ioregs ioregs_dccv3 = {
-        .cm0ioctl               = MT41K256M16TW107_IOCTRL_VALUE,
-        .cm1ioctl               = MT41K256M16TW107_IOCTRL_VALUE,
-        .cm2ioctl               = MT41K256M16TW107_IOCTRL_VALUE,
-        .dt0ioctl               = MT41K256M16TW107_IOCTRL_VALUE,
-        .dt1ioctl               = MT41K256M16TW107_IOCTRL_VALUE,
+	.cm0ioctl = MT41K256M16TW107_IOCTRL_VALUE,
+	.cm1ioctl = MT41K256M16TW107_IOCTRL_VALUE,
+	.cm2ioctl = MT41K256M16TW107_IOCTRL_VALUE,
+	.dt0ioctl = MT41K256M16TW107_IOCTRL_VALUE,
+	.dt1ioctl = MT41K256M16TW107_IOCTRL_VALUE,
 };
 
 void sdram_init(void)
 {
-	__maybe_unused struct am335x_baseboard_id header;
-
-	if (read_eeprom(&header) < 0)
-		puts("Could not get board ID.\n");
-
-        if(board_type == DCC_BOARD_REV2) {
-                config_ddr(400, &ioregs_dcc, &ddr3_dcc_data,
-                        &ddr3_dcc_cmd_ctrl_data, &ddr3_dcc_emif_reg_data, 0);
-        } else {
-                config_ddr(400, &ioregs_dccv3, &ddr3_dccv3_data,
-                        &ddr3_dccv3_cmd_ctrl_data, &ddr3_dccv3_emif_reg_data, 0);
-        }
+	if (board_type == DCC_BOARD_REV2) {
+		config_ddr(400, &ioregs_dcc, &ddr3_dcc_data,
+			&ddr3_dcc_cmd_ctrl_data, &ddr3_dcc_emif_reg_data, 0);
+	} else {
+		config_ddr(400, &ioregs_dccv3, &ddr3_dccv3_data,
+			&ddr3_dccv3_cmd_ctrl_data,
+			&ddr3_dccv3_emif_reg_data, 0);
+	}
 }
 #endif
+
 /*
  * Basic board specific setup.  Pinmux has been handled already.
  */
 int board_init(void)
 {
 	u32 sys_reboot;
+
 	sys_reboot = readl(PRM_RSTST);
 	if (sys_reboot & (1 << 9))
 		puts("Reset Source: IcePick reset has occurred.\n");
@@ -313,6 +327,134 @@ int board_init(void)
 #if defined(CONFIG_NOR) || defined(CONFIG_NAND)
 	gpmc_init();
 #endif
+
+	if (board_type == DCC_BOARD_REV2) {
+/* Drive MCP2515 Reset GPIO(GPIO02_28) for DCCV2 to output low to force reset */
+#define GPIO_MCP2515_RESETV2 92
+		gpio_request(GPIO_MCP2515_RESETV2, "mcp2515_nrst");
+		gpio_direction_output(GPIO_MCP2515_RESETV2, 0);
+		gpio_free(GPIO_MCP2515_RESETV2);
+#define GPIO_ETH_SW_RESET 60
+		gpio_request(GPIO_ETH_SW_RESET, "eth_reset");
+		gpio_direction_output(GPIO_ETH_SW_RESET, 0);
+		gpio_free(GPIO_ETH_SW_RESET);
+	} else {
+/* Drive MCP2515 Reset GPIO(GPIO01_15) to output low to force reset */
+#define GPIO_MCP2515_RESET 47
+		gpio_request(GPIO_MCP2515_RESET, "mcp2515_nrst");
+		gpio_direction_output(GPIO_MCP2515_RESET, 0);
+		gpio_free(GPIO_MCP2515_RESET);
+/* CHAD1/CHAD2n GPIO2_5 */
+#define GPIO_CHAD1_CHAD2_N 69
+		gpio_request(GPIO_CHAD1_CHAD2_N, "chad1_chad2n");
+		gpio_direction_output(GPIO_CHAD1_CHAD2_N, 1);
+		gpio_free(GPIO_CHAD1_CHAD2_N);
+/* CHAdeMO_1_Charge GPIO2_22 */
+#define GPIO_CHADM1_CHRG 86
+		gpio_request(GPIO_CHADM1_CHRG, "CHAdeMO_1_Charge");
+		gpio_direction_output(GPIO_CHADM1_CHRG, 1);
+		gpio_free(GPIO_CHADM1_CHRG);
+/* CHAdeMO_1_Proximity GPIO0_26 */
+#define GPIO_CHADM1_PROX 26
+		gpio_request(GPIO_CHADM1_PROX, "CHAdeMO_1_Proximity");
+		gpio_direction_output(GPIO_CHADM1_PROX, 1);
+		gpio_free(GPIO_CHADM1_PROX);
+/* CHAdeMO_2_Charge GPIO2_23 */
+#define GPIO_CHADM2_CHRG 87
+		gpio_request(GPIO_CHADM2_CHRG, "CHAdeMO_2_Charge");
+		gpio_direction_output(GPIO_CHADM2_CHRG, 1);
+		gpio_free(GPIO_CHADM2_CHRG);
+/* Output_Pilot_1_PWM_n GPIO1_12 */
+#define GPIO_OUT_PILOT1_PWM 44
+		gpio_request(GPIO_OUT_PILOT1_PWM, "Output_Pilot_1_PWM_n");
+		gpio_direction_output(GPIO_OUT_PILOT1_PWM, 0);
+		gpio_free(GPIO_OUT_PILOT1_PWM);
+/* Output_Tesla_PWM_n GPIO2_1 */
+#define GPIO_TESLA_PWM 65
+		gpio_request(GPIO_TESLA_PWM, "Output_Tesla_PWM_n");
+		gpio_direction_output(GPIO_TESLA_PWM, 0);
+		gpio_free(GPIO_TESLA_PWM);
+/* I2C0_Reset_n GPIO3_21 */
+#define GPIO_I2C0_RESET 117
+		gpio_request(GPIO_I2C0_RESET, "GPIO_I2C0_RESET");
+		gpio_direction_output(GPIO_I2C0_RESET, 0);
+		gpio_free(GPIO_I2C0_RESET);
+/* Cable_I2C_reset GPIO0_30 */
+#define GPIO_CABLE_I2C_RESET 30
+		gpio_request(GPIO_CABLE_I2C_RESET, "Cable_I2C_Reset_n");
+		gpio_direction_output(GPIO_CABLE_I2C_RESET, 0);
+		gpio_free(GPIO_CABLE_I2C_RESET);
+/* CHAdeMO_12V_Enable  GPIO3_17*/
+#define GPIO_CHAD_12VEN 113
+		gpio_request(GPIO_CHAD_12VEN, "CHAdeMO_12V_Enable");
+		gpio_direction_output(GPIO_CHAD_12VEN, 0);
+		gpio_free(GPIO_CHAD_12VEN);
+/* CHAdeMO_L_P12V_ON    GPIO3_9*/
+#define GPIO_CHAD_L_12VEN 105
+		gpio_request(GPIO_CHAD_L_12VEN, "CHAdeMO_L_P12V_ON");
+		gpio_direction_output(GPIO_CHAD_L_12VEN, 0);
+		gpio_free(GPIO_CHAD_L_12VEN);
+/* CHAdeMO_L_P12V_STAT    GPIO1_24*/
+#define GPIO_CHAD_L_12VSTAT 56
+		gpio_request(GPIO_CHAD_L_12VSTAT, "CHAdeMO_L_P12V_STAT");
+		gpio_direction_input(GPIO_CHAD_L_12VSTAT);
+		gpio_free(GPIO_CHAD_L_12VSTAT);
+/* CHAdeMO_1_Sequence_1 GPIO1_13 */
+#define GPIO_CHAD1_SEQ1 45
+		gpio_request(GPIO_CHAD1_SEQ1, "CHAdeMO_1_Sequence_1");
+		gpio_direction_output(GPIO_CHAD1_SEQ1, 0);
+		gpio_free(GPIO_CHAD1_SEQ1);
+/* CHAdeMO_1_Sequence_2 GPIO1_14 */
+#define GPIO_CHAD1_SEQ2 46
+		gpio_request(GPIO_CHAD1_SEQ2, "CHAdeMO_1_Sequence_2");
+		gpio_direction_output(GPIO_CHAD1_SEQ2, 0);
+		gpio_free(GPIO_CHAD1_SEQ2);
+/* CHAdeMO_1_Seq_Det_n GPIO0_17 */
+#define GPIO_CHAD1_SEQDET 17
+		gpio_request(GPIO_CHAD1_SEQDET, "CHAdeMO_1_Seq_Det_n");
+		gpio_direction_input(GPIO_CHAD1_SEQDET);
+		gpio_free(GPIO_CHAD1_SEQDET);
+/* CHAdeMO_1_L_EN GPIO1_19 */
+#define GPIO_CHAD1_LEN 51
+		gpio_request(GPIO_CHAD1_LEN, "CHAdeMO_1_L_EN");
+		gpio_direction_output(GPIO_CHAD1_LEN, 0);
+		gpio_free(GPIO_CHAD1_LEN);
+/* CHAdeMO_2_Sequence_1 GPIO3_19 */
+#define GPIO_CHAD2_SEQ1 115
+		gpio_request(GPIO_CHAD2_SEQ1, "CHAdeMO_2_Sequence_1");
+		gpio_direction_output(GPIO_CHAD2_SEQ1, 0);
+		gpio_free(GPIO_CHAD2_SEQ1);
+/* CHAdeMO_2_Sequence_2 GPIO3_20 */
+#define GPIO_CHAD2_SEQ2 116
+		gpio_request(GPIO_CHAD2_SEQ2, "CHAdeMO_2_Sequence_2");
+		gpio_direction_output(GPIO_CHAD2_SEQ2, 0);
+		gpio_free(GPIO_CHAD2_SEQ2);
+/* CHAdeMO_2_Seq_Det_n GPIO0_16 */
+#define GPIO_CHAD2_SEQDET 16
+		gpio_request(GPIO_CHAD2_SEQDET, "CHAdeMO_2_Seq_Det_n");
+		gpio_direction_input(GPIO_CHAD2_SEQDET);
+		gpio_free(GPIO_CHAD2_SEQDET);
+/* CHAdeMO_2_L_EN GPIO1_18 */
+#define GPIO_CHAD2_LEN 50
+		gpio_request(GPIO_CHAD2_LEN, "CHAdeMO_2_L_EN");
+		gpio_direction_output(GPIO_CHAD2_LEN, 0);
+		gpio_free(GPIO_CHAD2_LEN);
+	}
+
+/* Drive PLC1/PLC2 Reset GPIO(GPIO2_24, GPIO2_25) to output low */
+#define GPIO_PLC1_RESET 88
+	gpio_request(GPIO_PLC1_RESET, "plc1_rst");
+	gpio_direction_output(GPIO_PLC1_RESET, 0);
+	gpio_free(GPIO_PLC1_RESET);
+
+#define GPIO_PLC2_RESET 89
+	gpio_request(GPIO_PLC2_RESET, "plc2_rst");
+	gpio_direction_output(GPIO_PLC2_RESET, 0);
+	gpio_free(GPIO_PLC2_RESET);
+
+	/* ensure plcs are in reset for at least 500ms */
+	mdelay(500);
+
 	return 0;
 }
 
@@ -321,7 +463,7 @@ int board_late_init(void)
 {
 #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
 	char safe_string[HDR_NAME_LEN + 1];
-	struct am335x_baseboard_id header;
+	__maybe_unused struct am335x_baseboard_id header;
 
 	if (read_eeprom(&header) < 0)
 		puts("Could not get board ID.\n");
@@ -335,141 +477,10 @@ int board_late_init(void)
 	safe_string[sizeof(header.version)] = 0;
 	setenv("board_rev", safe_string);
 #endif
-	// disable auto boot delay (AUTOBOOT_KEYED for ctrl-C protection)
+
+	/* disable auto boot delay (AUTOBOOT_KEYED for ctrl-C protection) */
 	setenv("bootdelay", "0");
-get_board_revision();
-/* Drive PLC1/PLC2 Reset GPIO(GPIO2_24, GPIO2_25) to output low */
-#define GPIO_PLC_RESET 88
-        gpio_request(GPIO_PLC_RESET, "plc_en");
-        gpio_direction_output(GPIO_PLC_RESET, 0);
-        gpio_free(GPIO_PLC_RESET);
 
-#define GPIO_PLC2_RESET 89
-        gpio_request(GPIO_PLC2_RESET, "plc2_en");
-        gpio_direction_output(GPIO_PLC2_RESET, 0);
-        gpio_free(GPIO_PLC2_RESET);
-
-/* Drive MCP2515 Reset GPIO(GPIO02_28) for DCCV2 to output low to force reset */
-#define GPIO_MCP2515_RESETV2 92
-/* Drive MCP2515 Reset GPIO(GPIO01_15) for DCCV3 to output low to force reset */
-#define GPIO_MCP2515_RESET 47
-#define GPIO_ETH_SW_RESET 60
-        if(board_type == DCC_BOARD_REV2){
-                gpio_request(GPIO_MCP2515_RESETV2, "mcp2515_nrst");
-                gpio_direction_output(GPIO_MCP2515_RESETV2, 0);
-                gpio_free(GPIO_MCP2515_RESET);
-                gpio_request(GPIO_ETH_SW_RESET, "eth_reset");
-                gpio_direction_output(GPIO_ETH_SW_RESET, 0);
-                gpio_free(GPIO_ETH_SW_RESET);
-        } else if(board_type == DCC_BOARD_REV3){
-                gpio_request(GPIO_MCP2515_RESET, "mcp2515_nrst");
-                gpio_direction_output(GPIO_MCP2515_RESET, 0);
-                gpio_free(GPIO_MCP2515_RESET);
-        } else {
-                gpio_request(GPIO_MCP2515_RESET, "mcp2515_nrst");
-                gpio_direction_output(GPIO_MCP2515_RESET, 0);
-                gpio_free(GPIO_MCP2515_RESET);
-/* CHAD1/CHAD2n GPIO2_5 */
-#define GPIO_CHAD1_CHAD2_N 69
-                gpio_request(GPIO_CHAD1_CHAD2_N, "chad1_chad2n");
-                gpio_direction_output(GPIO_CHAD1_CHAD2_N, 1);
-                gpio_free(GPIO_CHAD1_CHAD2_N);
-/* CHAdeMO_1_Charge GPIO2_22 */
-#define GPIO_CHADM1_CHRG 86
-                gpio_request(GPIO_CHADM1_CHRG, "CHAdeMO_1_Charge");
-                gpio_direction_output(GPIO_CHADM1_CHRG, 1);
-                gpio_free(GPIO_CHADM1_CHRG);
-/* CHAdeMO_1_Proximity GPIO0_26 */
-#define GPIO_CHADM1_PROX 26
-                gpio_request(GPIO_CHADM1_PROX, "CHAdeMO_1_Proximity");
-                gpio_direction_output(GPIO_CHADM1_PROX, 1);
-                gpio_free(GPIO_CHADM1_PROX);
-/* CHAdeMO_2_Charge GPIO2_23 */
-#define GPIO_CHADM2_CHRG 87
-                gpio_request(GPIO_CHADM2_CHRG, "CHAdeMO_2_Charge");
-                gpio_direction_output(GPIO_CHADM2_CHRG, 1);
-                gpio_free(GPIO_CHADM2_CHRG);
-/* CurrentSenseInt_n GPIO0_27 */
-#define GPIO_CURSEN_INT 27
-                gpio_request(GPIO_CURSEN_INT, "CurrentSenseInt_n");
-                gpio_direction_output(GPIO_CURSEN_INT, 0);
-                gpio_free(GPIO_CURSEN_INT);
-/* Output_Pilot_1_PWM_n GPIO1_12 */
-#define GPIO_OUT_PILOT1_PWM 44
-                gpio_request(GPIO_OUT_PILOT1_PWM, "Output_Pilot_1_PWM_n");
-                gpio_direction_output(GPIO_OUT_PILOT1_PWM, 0);
-                gpio_free(GPIO_OUT_PILOT1_PWM);
-/* Output_Tesla_PWM_n GPIO2_1 */
-#define GPIO_TESLA_PWM 65
-                gpio_request(GPIO_TESLA_PWM, "Output_Tesla_PWM_n");
-                gpio_direction_output(GPIO_TESLA_PWM, 0);
-                gpio_free(GPIO_TESLA_PWM);
-/* I2C0_Reset_n GPIO3_21 */
-#define GPIO_I2C0_RESET 117
-                gpio_request(GPIO_I2C0_RESET, "GPIO_I2C0_RESET");
-                gpio_direction_output(GPIO_I2C0_RESET, 0);
-                gpio_free(GPIO_I2C0_RESET);
-/* Cable_I2C_reset GPIO0_30 */
-#define GPIO_CABLE_I2C_RESET 30
-                gpio_request(GPIO_CABLE_I2C_RESET, "Cable_I2C_Reset_n");
-                gpio_direction_output(GPIO_CABLE_I2C_RESET, 0);
-                gpio_free(GPIO_CABLE_I2C_RESET);
-/* CHAdeMO_12V_Enable  GPIO3_17*/
-#define GPIO_CHAD_12VEN 113
-                gpio_request(GPIO_CHAD_12VEN, "CHAdeMO_12V_Enable");
-                gpio_direction_output(GPIO_CHAD_12VEN, 0);
-                gpio_free(GPIO_CHAD_12VEN);
-/* CHAdeMO_L_P12V_ON    GPIO3_9*/
-#define GPIO_CHAD_L_12VEN 105
-                gpio_request(GPIO_CHAD_L_12VEN, "CHAdeMO_L_P12V_ON");
-                gpio_direction_output(GPIO_CHAD_L_12VEN, 0);
-                gpio_free(GPIO_CHAD_L_12VEN);
-/* CHAdeMO_L_P12V_STAT    GPIO1_24*/
-#define GPIO_CHAD_L_12VSTAT 56
-                gpio_request(GPIO_CHAD_L_12VSTAT, "CHAdeMO_L_P12V_STAT");
-                gpio_direction_input(GPIO_CHAD_L_12VSTAT);
-                gpio_free(GPIO_CHAD_L_12VSTAT);
-/* CHAdeMO_1_Sequence_1 GPIO1_13 */
-#define GPIO_CHAD1_SEQ1 45
-                gpio_request(GPIO_CHAD1_SEQ1, "CHAdeMO_1_Sequence_1");
-                gpio_direction_output(GPIO_CHAD1_SEQ1, 0);
-                gpio_free(GPIO_CHAD1_SEQ1);
-/* CHAdeMO_1_Sequence_2 GPIO1_14 */
-#define GPIO_CHAD1_SEQ2 46
-                gpio_request(GPIO_CHAD1_SEQ2, "CHAdeMO_1_Sequence_2");
-                gpio_direction_output(GPIO_CHAD1_SEQ2, 0);
-                gpio_free(GPIO_CHAD1_SEQ2);
-/* CHAdeMO_1_Seq_Det_n GPIO0_17 */
-#define GPIO_CHAD1_SEQDET 17
-                gpio_request(GPIO_CHAD1_SEQDET, "CHAdeMO_1_Seq_Det_n");
-                gpio_direction_input(GPIO_CHAD1_SEQDET);
-                gpio_free(GPIO_CHAD1_SEQDET);
-/* CHAdeMO_1_L_EN GPIO1_19 */
-#define GPIO_CHAD1_LEN 51
-                gpio_request(GPIO_CHAD1_LEN, "CHAdeMO_1_L_EN");
-                gpio_direction_output(GPIO_CHAD1_LEN, 0);
-                gpio_free(GPIO_CHAD1_LEN);
-/* CHAdeMO_2_Sequence_1 GPIO3_19 */
-#define GPIO_CHAD2_SEQ1 115
-                gpio_request(GPIO_CHAD2_SEQ1, "CHAdeMO_2_Sequence_1");
-                gpio_direction_output(GPIO_CHAD2_SEQ1, 0);
-                gpio_free(GPIO_CHAD2_SEQ1);
-/* CHAdeMO_2_Sequence_2 GPIO3_20 */
-#define GPIO_CHAD2_SEQ2 116
-                gpio_request(GPIO_CHAD2_SEQ2, "CHAdeMO_2_Sequence_2");
-                gpio_direction_output(GPIO_CHAD2_SEQ2, 0);
-                gpio_free(GPIO_CHAD2_SEQ2);
-/* CHAdeMO_2_Seq_Det_n GPIO0_16 */
-#define GPIO_CHAD2_SEQDET 16
-                gpio_request(GPIO_CHAD2_SEQDET, "CHAdeMO_2_Seq_Det_n");
-                gpio_direction_input(GPIO_CHAD2_SEQDET);
-                gpio_free(GPIO_CHAD2_SEQDET);
-/* CHAdeMO_2_L_EN GPIO1_18 */
-#define GPIO_CHAD2_LEN 50
-                gpio_request(GPIO_CHAD2_LEN, "CHAdeMO_2_L_EN");
-                gpio_direction_output(GPIO_CHAD2_LEN, 0);
-                gpio_free(GPIO_CHAD2_LEN);
-        }
 	return 0;
 }
 #endif
@@ -576,27 +587,23 @@ int board_eth_init(bd_t *bis)
 			eth_setenv_enetaddr("eth1addr", mac_addr);
 	}
 
-	if (read_eeprom(&header) < 0)
-		puts("Could not get board ID.\n");
-/*
-        writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
-        cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =	PHY_INTERFACE_MODE_RGMII; */
-        if(board_type == DCC_BOARD_REV2) {
-                /* Rev2 board has only one RMII phy connected to GMII1 port */
-                writel((GMII1_SEL_RMII | RMII1_IO_CLK_EN), &cdev->miisel);
-        } else {
-                /* Rev3 board has 2 RMII LAN phy connected */
-                writel((RMII_MODE_ENABLE | RMII_CHIPCKL_ENABLE), &cdev->miisel);
-        }
-        cpsw_slaves[0].phy_if =	PHY_INTERFACE_MODE_RMII;
-        cpsw_slaves[0].phy_addr = 0;
+	if (board_type == DCC_BOARD_REV2) {
+		/* Rev2 board has only one RMII phy connected to GMII1 port */
+		writel((GMII1_SEL_RMII | RMII1_IO_CLK_EN), &cdev->miisel);
 
-        if(board_type != DCC_BOARD_REV2) {
-                cpsw_slaves[1].phy_if =	PHY_INTERFACE_MODE_RMII;
-                cpsw_slaves[1].phy_addr = 1;
-        }
+		cpsw_slaves[0].phy_if =	PHY_INTERFACE_MODE_RMII;
+		cpsw_slaves[0].phy_addr = 0;
+	} else {
+		/* Rev3/4 board has 2 RMII LAN phy connected */
+		writel((RMII_MODE_ENABLE | RMII_CHIPCKL_ENABLE), &cdev->miisel);
 
-        rv = cpsw_register(&cpsw_data);
+		cpsw_slaves[0].phy_if =	PHY_INTERFACE_MODE_RMII;
+		cpsw_slaves[0].phy_addr = 0;
+		cpsw_slaves[1].phy_if =	PHY_INTERFACE_MODE_RMII;
+		cpsw_slaves[1].phy_addr = 1;
+	}
+
+	rv = cpsw_register(&cpsw_data);
 	if (rv < 0)
 		printf("Error %d registering CPSW switch\n", rv);
 	else

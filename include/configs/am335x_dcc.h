@@ -55,6 +55,8 @@
 #define CONFIG_ENV_SIZE			(128 << 10)
 
 /* Enhance our eMMC support / experience. */
+#define CONFIG_MMC
+#define CONFIG_DOS_PARTITION
 #define CONFIG_CMD_GPT
 #define CONFIG_EFI_PARTITION
 
@@ -108,143 +110,54 @@
 	func(NAND, nand, 0) \
 	func(PXE, pxe, na) \
 	func(DHCP, dhcp, na)
-#if 1
+
 #define CONFIG_BOOTCOMMAND \
-	"set autoload no; " \
-	"dhcp; " \
-	"tftp 0x80200000 uImage.am335x-dcc; " \
-	"set bootargs console=ttyO0,115200n8 " \
-		"serverip=${serverip} ipaddr=${ipaddr} domain=${domain}; " \
-	"bootm 0x80200000;" \
-	"reset;"
-#else
-#define CONFIG_BOOTCOMMAND \
-	"fatload mmc 1:1 0x80200000 uImage.am335x-dcc; " \
-	"set bootargs console=ttyO0,115200n8; " \
-	"bootm 0x80200000"
-#endif
+	"run mmcboot; " \
+	"run netboot; " \
+	"reset; "
+
 #include <config_distro_bootcmd.h>
 
 #ifndef CONFIG_SPL_BUILD
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	DEFAULT_LINUX_BOOT_ENV \
-	DEFAULT_MMC_TI_ARGS \
-	"boot_fdt=try\0" \
-	"bootpart=0:2\0" \
-	"bootdir=/boot\0" \
-	"bootfile=zImage\0" \
-	"fdtfile=undefined\0" \
-	"console=ttyO0,115200n8\0" \
-	"partitions=" \
-		"uuid_disk=${uuid_gpt_disk};" \
-		"name=rootfs,start=2MiB,size=-,uuid=${uuid_gpt_rootfs}\0" \
-	"optargs=\0" \
-	"ramroot=/dev/ram0 rw\0" \
-	"ramrootfstype=ext2\0" \
-	"spiroot=/dev/mtdblock4 rw\0" \
-	"spirootfstype=jffs2\0" \
-	"spisrcaddr=0xe0000\0" \
-	"spiimgsize=0x362000\0" \
-	"spibusno=0\0" \
-	"spiargs=setenv bootargs console=${console} " \
-		"${optargs} " \
-		"root=${spiroot} " \
-		"rootfstype=${spirootfstype}\0" \
+	"bootpart=0:1\0" \
+	"bootfile=uImage.am335x-dcc\0" \
+	"bootenvpart=0:1\0" \
 	"bootenv=uEnv.txt\0" \
-	"script=boot.scr\0" \
-	"scriptfile=${script}\0" \
-	"loadbootscript=load ${interface} ${bootpart} ${loadaddr} ${scriptfile};\0" \
-	"bootscript=echo Running bootscript from mmc${bootpart} ...; " \
-		"source ${loadaddr}\0" \
-	"loadbootenv=load ${interface} ${bootpart} ${loadaddr} ${bootenv}\0" \
-	"importbootenv=echo Importing environment from ${interface} ...; " \
-		"env import -t -r $loadaddr $filesize\0" \
-	"ramargs=setenv bootargs console=${console} " \
-		"${optargs} " \
-		"root=${ramroot} " \
-		"rootfstype=${ramrootfstype}\0" \
-	"loadramdisk=load ${interface} ${mmcdev} ${rdaddr} ramdisk.gz\0" \
-	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
-	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
-	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...; load ${interface} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
-	"failumsboot=echo; echo FAILSAFE: U-Boot UMS (USB Mass Storage) enabled, media now available over the usb slave port ...; " \
-		"ums 0 ${interface} 1;\0" \
-	"mmcloados=run args_mmc; " \
-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-			"if run loadfdt; then " \
-				"bootz ${loadaddr} - ${fdtaddr}; " \
-			"else " \
-				"if test ${boot_fdt} = try; then " \
-					"bootz; " \
-				"else " \
-					"echo WARN: Cannot load the DT; " \
-				"fi; " \
+	"rootpart=0:2\0" \
+	"console=ttyS0,115200n8\0" \
+	"mmcboot=echo Booting from SD/MMC on ${bootpart} ...; " \
+		"mmc dev 0; " \
+		"if mmc rescan; then " \
+			"part uuid mmc ${rootpart} bootuuid; " \
+			"if fatload mmc ${bootenvpart} ${loadaddr} " \
+				"${bootenv}; then " \
+				"echo Importing env from " \
+					"mmc ${bootenvpart} ...; " \
+				"env import -t -r ${loadaddr} ${filesize}; " \
 			"fi; " \
-		"else " \
-			"bootz; " \
-		"fi;\0" \
-	"mmcboot=${interface} dev ${mmcdev}; " \
-		"if ${interface} rescan; then " \
-			"echo SD/MMC found on device ${mmcdev};" \
-			"if run loadbootscript; then " \
-				"run bootscript;" \
-			"else " \
-				"if run loadbootenv; then " \
-					"echo Loaded environment from ${bootenv};" \
-					"run importbootenv;" \
-				"fi;" \
-				"if test -n $uenvcmd; then " \
-					"echo Running uenvcmd ...;" \
-					"run uenvcmd;" \
-				"fi;" \
-				"if run loadimage; then " \
-					"run mmcloados;" \
-				"fi;" \
-			"fi ;" \
-		"fi;\0" \
-	"spiboot=echo Booting from spi ...; " \
-		"run spiargs; " \
-		"sf probe ${spibusno}:0; " \
-		"sf read ${loadaddr} ${spisrcaddr} ${spiimgsize}; " \
-		"bootz ${loadaddr}\0" \
-	"ramboot=echo Booting from ramdisk ...; " \
-		"run ramargs; " \
-		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
-	"findfdt="\
-		"if test $board_name = A335BONE; then " \
-			"setenv fdtfile am335x-bone.dtb; setenv fdtbase am335x-bone; fi; " \
-		"if test $board_name = A335BNLT; then " \
-			"if test $board_rev = BLA0; then " \
-				"setenv fdtfile am335x-boneblue.dtb; setenv fdtbase am335x-boneblue; " \
-			"elif test $board_rev = BBG1; then " \
-				"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; " \
-			"elif test $board_rev = GW1A; then " \
-				"setenv fdtfile am335x-bonegreen-wireless.dtb; setenv fdtbase am335x-bonegreen-wireless; " \
-			"elif test $board_rev = AIA0; then " \
-				"setenv fdtfile am335x-abbbi.dtb; setenv fdtbase am335x-abbbi; " \
-			"elif test $board_rev = EIA0; then " \
-				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
-			"elif test $board_rev = SE0A; then " \
-				"setenv fdtfile am335x-sancloud-bbe.dtb; setenv fdtbase am335x-sancloud-bbe; " \
-			"elif test $board_rev = ME06; then " \
-				"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; " \
-			"elif test $board_rev = M10A; then " \
-				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
-			"elif test $board_rev = GH01; then " \
-				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
-			"else " \
-				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
+			"if fatload mmc ${bootpart} ${loadaddr} " \
+				"${bootfile}; then " \
+				"echo Loaded ${bootfile} from " \
+					"mmc ${bootpart}; " \
+				"setenv bootargs console=${console} " \
+					"root=PARTUUID=${bootuuid} " \
+					"rootwait rw; " \
+				"bootm ${loadaddr}; " \
 			"fi; " \
-		"fi; " \
-		"if test $board_name = A33515BB; then " \
-			"setenv fdtfile am335x-evm.dtb; fi; " \
-		"if test $board_name = A335X_SK; then " \
-			"setenv fdtfile am335x-evmsk.dtb; fi; " \
-		"if test $fdtfile = undefined; then " \
-			"echo WARNING: Could not determine device tree to use; fi; \0" \
-	EEWIKI_NFS \
-	EEWIKI_BOOT \
-	EEWIKI_UNAME_BOOT \
+		"fi;\0" \
+	"netboot=echo Booting from network ...; " \
+		"set autoload no; " \
+		"dhcp; " \
+		"if tftp ${loadaddr} ${bootfile}; then " \
+			"echo Loaded ${bootfile} from ${serverip}; " \
+			"setenv bootargs console=${console} " \
+				"serverip=${serverip} " \
+				"ipaddr=${ipaddr} " \
+				"domain=${domain}; " \
+			"bootm ${loadaddr}; " \
+		"fi;\0" \
 	NANDARGS \
 	NETARGS \
 	DFUARGS \
@@ -259,6 +172,7 @@
 #define CONFIG_SYS_NS16550_COM4		0x481a6000	/* UART3 */
 #define CONFIG_SYS_NS16550_COM5		0x481a8000	/* UART4 */
 #define CONFIG_SYS_NS16550_COM6		0x481aa000	/* UART5 */
+#define CONFIG_CONS_INDEX		1
 #define CONFIG_BAUDRATE			115200
 
 #define CONFIG_CMD_EEPROM
