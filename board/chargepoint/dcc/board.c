@@ -41,14 +41,23 @@ DECLARE_GLOBAL_DATA_PTR;
 
 static enum am335x_dcc_board board_type = DCC_BOARD_NONE;
 
-#define GPIO_BOARD_ID1 66 /* gpio2_2 */
-#define GPIO_BOARD_ID2 67 /* gpio2_3 */
+#define GPIO_BOARD_ID0 66 /* gpio2_2 */
+#define GPIO_BOARD_ID1 67 /* gpio2_3 */
 int get_board_revision(void)
 {
 	int ret;
 	int revision;
+	int id0 = 0;
 	int id1 = 0;
-	int id2 = 0;
+
+	ret = gpio_request(GPIO_BOARD_ID0, "board-id0");
+	if (ret && ret != -EBUSY) {
+		printf("gpio: requesting pin %u failed\n", GPIO_BOARD_ID0);
+	} else {
+		gpio_direction_input(GPIO_BOARD_ID0);
+		id0 = gpio_get_value(GPIO_BOARD_ID0);
+		gpio_free(GPIO_BOARD_ID0);
+	}
 
 	ret = gpio_request(GPIO_BOARD_ID1, "board-id1");
 	if (ret && ret != -EBUSY) {
@@ -59,17 +68,8 @@ int get_board_revision(void)
 		gpio_free(GPIO_BOARD_ID1);
 	}
 
-	ret = gpio_request(GPIO_BOARD_ID2, "board-id2");
-	if (ret && ret != -EBUSY) {
-		printf("gpio: requesting pin %u failed\n", GPIO_BOARD_ID2);
-	} else {
-		gpio_direction_input(GPIO_BOARD_ID2);
-		id2 = gpio_get_value(GPIO_BOARD_ID2);
-		gpio_free(GPIO_BOARD_ID2);
-	}
-
-	revision = id2 << 1 | id1;
-	printf("board rev=%d (id2=%d id1=%d)\n", revision, id2, id1);
+	revision = (id1 << 1) | id0;
+	printf("board rev=%d (id1=%d id0=%d)\n", revision, id1, id0);
 	return revision;
 }
 
