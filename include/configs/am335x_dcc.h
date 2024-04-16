@@ -158,6 +158,9 @@
 	BOOTENV
 #endif
 
+/* GPIO support */
+#define CONFIG_SPL_GPIO_SUPPORT
+#define CONFIG_OMAP_GPIO
 
 /* NS16550 Configuration */
 #define CONFIG_SYS_NS16550_COM1		0x44e09000	/* Base EVM has UART0 */
@@ -422,23 +425,21 @@
 #define CONFIG_SYS_MMC_ENV_DEV		1
 #define CONFIG_SYS_MMC_ENV_PART		0
 #define CONFIG_ENV_OFFSET		0xE0000
-/*
-#define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + CONFIG_ENV_SIZE)
-#define CONFIG_SYS_REDUNDAND_ENVIRONMENT
-*/
 #endif
 
 /* SPI flash. */
-/*
-#define CONFIG_CMD_SF
-#define CONFIG_SF_DEFAULT_SPEED		24000000 */
 
 /* Network. */
 #define CONFIG_PHY_GIGE
 #define CONFIG_PHYLIB
 #define CONFIG_PHY_ADDR                 0
 #define CONFIG_PHY_SMSC
-#define PHY_ANEG_TIMEOUT        800000 /* PHY needs longer time to get link up due to cpnk OTA bootup.DCC wait for CPNK ethernet for 18 mins(3 times the mfg OTA complete time) */
+/*
+ * PHY needs longer time to get link up due to cpnk OTA bootup.
+ * DCC wait for CPNK ethernet for 18 mins(3 times the mfg OTA complete time)
+ */
+#define PHY_ANEG_TIMEOUT        800000
+
 /*
  * NOR Size = 16 MiB
  * Number of Sectors/Blocks = 128

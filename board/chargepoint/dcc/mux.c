@@ -213,13 +213,6 @@ static struct module_pin_mux rmii2_pin_mux[] = {
 	{-1},
 };
 
-static struct module_pin_mux bbb_p9_15_pin_mux[] = {
-	/* P9.15 shared pin */
-	{OFFSET(gpmc_a0), MODE(0) | PULLUDDIS},
-	{OFFSET(gpmc_csn3), (MODE(3) | RXACTIVE | PULLUP_EN)},
-	{-1},
-};
-
 static struct module_pin_mux board_id_pin_mux[] = {
 	{OFFSET(gpmc_advn_ale), (MODE(7))},  /* gpmc_advn_ale.gpio2_2 */
 	{OFFSET(gpmc_oen_ren), (MODE(7))},  /* gpmc_oen_ren.gpio2_3 */
